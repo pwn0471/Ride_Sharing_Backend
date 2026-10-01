@@ -70,7 +70,14 @@ const seedUsers = async () => {
     ];
     
     // Create users
-    const createdUsers = await User.insertMany(testUsers);
+    // Create users
+    const createdUsers = [];
+
+    for (const userData of testUsers) {
+      const user = new User(userData);
+      await user.save();
+      createdUsers.push(user);
+    }
     console.log(`✅ Created ${createdUsers.length} test users:`);
     
     createdUsers.forEach(user => {

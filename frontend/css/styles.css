@@ -578,3 +578,17 @@ input:checked + .slider:before {
         width: auto;
     }
 }
+/* Fix Book Ride modal overflowing the screen */
+#book-ride-modal .modal-content {
+    max-height: 85vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+/* Make Book Ride button visible */
+#book-ride-modal .btn-primary {
+    display: block;
+    width: 100%;
+    margin-top: 15px;
+    padding: 12px 20px;
+}

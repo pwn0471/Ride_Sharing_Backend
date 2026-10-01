@@ -10,7 +10,7 @@ dotenv.config();
 
 // Import configurations
 const { connectDB } = require('./config/database');
-const { connectRedis } = require('./config/redis-railway');
+const { connectRedis } = require('./config/redis');
 const { specs, swaggerUi, swaggerOptions } = require('./config/swagger');
 
 // Import routes
@@ -209,13 +209,12 @@ server.listen(PORT, async () => {
         nodeVersion: process.version
     });
     
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📊 Environment: ${process.env.NODE_ENV}`);
-    console.log(`🔧 In-memory MongoDB connected: 127.0.0.1`);
-    console.log(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
-    console.log(`⚡ Performance Metrics: http://localhost:${PORT}/api/performance`);
-    console.log(`🔌 WebSocket enabled for real-time updates`);
-    console.log(`🏎️  Optimizations enabled: Caching, Rate Limiting, Compression, Security`);
+    console.log(` Server running on port ${PORT}`);
+    console.log(` Environment: ${process.env.NODE_ENV}`);
+    console.log(` In-memory MongoDB connected: 127.0.0.1`);
+    console.log(` API Documentation: http://localhost:${PORT}/api-docs`);
+    console.log(` Performance Metrics: http://localhost:${PORT}/api/performance`);
+    
     
     if (orderCacheService) {
         console.log('📊 Cache service: Ready');

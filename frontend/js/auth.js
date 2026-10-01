@@ -3,7 +3,7 @@ class AuthManager {
     constructor() {
         this.tokenKey = 'rideshare_token';
         this.userKey = 'rideshare_user';
-        this.apiBaseUrl = 'http://localhost:3001/api';
+        this.apiBaseUrl = 'http://localhost:3000/api';
         this.token = this.getStoredToken();
         this.user = this.getStoredUser();
     }

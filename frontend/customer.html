@@ -112,6 +112,28 @@
                         <label for="destination">Destination:</label>
                         <input type="text" id="destination" required placeholder="Enter destination address">
                     </div>
+
+                    <div class="form-group">
+                        <label for="pickup-coordinates">Pickup Coordinates:</label>
+                        <input
+                            type="text"
+                            id="pickup-coordinates"
+                            required
+                            placeholder="latitude, longitude"
+                            value="22.0667, 88.0698"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="dropoff-coordinates">Destination Coordinates:</label>
+                        <input
+                            type="text"
+                            id="dropoff-coordinates"
+                            required
+                            placeholder="latitude, longitude"
+                            value="22.0740, 88.0690"
+                        >
+                    </div>
                     <div class="form-group">
                         <label for="vehicle-type">Vehicle Type:</label>
                         <select id="vehicle-type" required>
@@ -335,12 +357,45 @@
         // Handle book ride
         async function handleBookRide(event) {
             event.preventDefault();
-            
+
+            const pickupCoords = document
+                .getElementById('pickup-coordinates')
+                .value
+                .split(',')
+                .map(Number);
+
+            const dropoffCoords = document
+                .getElementById('dropoff-coordinates')
+                .value
+                .split(',')
+                .map(Number);
+
+            if (
+                pickupCoords.length !== 2 ||
+                dropoffCoords.length !== 2 ||
+                pickupCoords.some(isNaN) ||
+                dropoffCoords.some(isNaN)
+            ) {
+                uiUtils.showMessage(
+                    'Please enter valid coordinates: latitude, longitude',
+                    'error'
+                );
+                return;
+            }
+
             const rideData = {
-                pickupLocation: document.getElementById('pickup-location').value,
-                destination: document.getElementById('destination').value,
-                vehicleType: document.getElementById('vehicle-type').value,
-                notes: document.getElementById('notes').value || undefined
+                pickupAddress: document.getElementById('pickup-location').value,
+                pickupLatitude: pickupCoords[0],
+                pickupLongitude: pickupCoords[1],
+
+                dropoffAddress: document.getElementById('destination').value,
+                dropoffLatitude: dropoffCoords[0],
+                dropoffLongitude: dropoffCoords[1],
+
+                orderType: 'ride',
+
+                specialInstructions:
+                    document.getElementById('notes').value || undefined
             };
 
             uiUtils.showLoading('book-ride-btn');
@@ -350,11 +405,11 @@
                     method: 'POST',
                     body: JSON.stringify(rideData)
                 });
-                
+
                 if (result.success) {
                     uiUtils.showMessage('Ride booked successfully!', 'success');
                     closeBookRideModal();
-                    loadOrders(); // Refresh orders
+                    loadOrders();
                 } else {
                     uiUtils.showMessage(result.error, 'error');
                 }
@@ -364,7 +419,6 @@
                 uiUtils.hideLoading('book-ride-btn', 'Book Ride');
             }
         }
-
         // Cancel order
         async function cancelOrder(orderId) {
             if (!confirm('Are you sure you want to cancel this order?')) {

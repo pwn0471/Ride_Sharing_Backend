@@ -37,7 +37,7 @@ if __name__ == "__main__":
         print(f"   • Main page: http://localhost:{PORT}")
         print(f"   • Customer: http://localhost:{PORT}/customer.html")
         print(f"   • Driver: http://localhost:{PORT}/driver.html")
-        print("\n💡 Make sure your backend is running on http://localhost:3001")
+        print("\n💡 Make sure your backend is running on http://localhost:3000")
         print("⏹️  Press Ctrl+C to stop the server")
         
         try:

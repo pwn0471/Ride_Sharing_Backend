@@ -2,14 +2,14 @@
   "name": "ride-sharing-backend",
   "version": "1.0.0",
   "description": "Ride sharing backend with delivery partner assignment and order locking system",
-  "main": "src/app.js",
+  "main": "backend/app.js",
   "scripts": {
-    "start": "node src/app.js",
-    "dev": "nodemon src/app.js",
+    "start": "node backend/app.js",
+    "dev": "nodemon backend/app.js",
     "test": "jest",
     "test-connection": "node -e \"const mongoose = require('mongoose'); mongoose.connect(process.env.TEST_MONGODB_URI).then(() => { console.log('✅ Connection successful!'); process.exit(0); }).catch(err => { console.error('❌ Connection failed:', err.message); process.exit(1); });\"",
     "setup-users": "node setup-users.js",
-    "seed": "node src/scripts/seedUsers.js",
+    "seed": "node backend/scripts/seedUsers.js",
     "build": "echo 'Build completed - ready for Railway'",
     "railway:health": "curl $RAILWAY_PUBLIC_DOMAIN/api/health",
     "railway:logs": "railway logs"

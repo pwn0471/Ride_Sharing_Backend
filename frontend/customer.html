@@ -153,8 +153,49 @@
         </div>
     </div>
 
+    <script src="http://localhost:3000/socket.io/socket.io.js"></script>
     <script src="js/auth.js"></script>
     <script>
+        let socket = null;
+
+        function connectCustomerSocket() {
+            const token = authManager.token;
+
+            if (!token) {
+                console.warn('⚠️ No customer authentication token found');
+                return;
+            }
+
+            socket = io('http://localhost:3000', {
+                auth: {
+                    token: token
+                }
+            });
+
+            socket.on('connect', () => {
+                console.log('🟢 Customer Socket connected:', socket.id);
+            });
+
+            socket.on('order_accepted', (data) => {
+                console.log('✅ ORDER ACCEPTED:', data);
+
+                alert(
+                    `🎉 Ride Accepted!\n\n` +
+                    `Order: ${data.orderId}\n` +
+                    `Driver: ${data.driverInfo?.name || 'Driver'}`
+                );
+
+                loadOrders();
+            });
+
+            socket.on('connect_error', (error) => {
+                console.error('❌ Customer Socket connection error:', error.message);
+            });
+
+            socket.on('disconnect', (reason) => {
+                console.log('🔴 Customer Socket disconnected:', reason);
+            });
+        }
         let orders = [];
         let autoRefreshInterval = null;
 
@@ -163,6 +204,7 @@
             console.log('🚀 Initializing Customer Dashboard');
             
             if (authManager.isAuthenticated()) {
+                connectCustomerSocket();
                 showDashboard();
                 loadUserInfo();
                 loadOrders();
@@ -296,7 +338,7 @@
         // Display orders
         function displayOrders() {
             const container = document.getElementById('orders-container');
-            
+
             if (orders.length === 0) {
                 container.innerHTML = '<div class="no-orders">No orders found. Book your first ride!</div>';
                 return;
@@ -305,36 +347,99 @@
             const ordersHtml = orders.map(order => `
                 <div class="order-card ${order.status}">
                     <div class="order-header">
-                        <div class="order-id">Order #${order.orderId}</div>
-                        <div class="order-status status-${order.status}">${order.status.toUpperCase()}</div>
+                        <div class="order-id">
+                            Order #${order.orderId}
+                        </div>
+
+                        <div class="order-status status-${order.status}">
+                            ${order.status.toUpperCase()}
+                        </div>
                     </div>
+
                     <div class="order-details">
+
                         <div class="location">
-                            <div class="pickup">📍 ${order.pickupLocation}</div>
-                            <div class="destination">🏁 ${order.destination}</div>
-                        </div>
-                        <div class="order-info">
-                            <div class="vehicle-type">🚗 ${order.vehicleType}</div>
-                            <div class="created-at">🕒 ${uiUtils.formatDate(order.createdAt)}</div>
-                            ${order.estimatedPrice ? `<div class="price">💰 ₹${order.estimatedPrice}</div>` : ''}
-                        </div>
-                        ${order.assignedDriver ? `
-                            <div class="driver-info">
-                                <div class="driver-name">👨‍💼 ${order.assignedDriver.name}</div>
-                                <div class="driver-phone">📞 ${order.assignedDriver.phone}</div>
+                            <div class="pickup">
+                                📍 ${order.pickupAddress || 'Pickup address unavailable'}
                             </div>
-                        ` : ''}
-                        ${order.notes ? `<div class="notes">📝 ${order.notes}</div>` : ''}
+
+                            <div class="destination">
+                                🏁 ${order.dropoffAddress || 'Destination unavailable'}
+                            </div>
+                        </div>
+
+                        <div class="order-info">
+                            <div class="vehicle-type">
+                                🚗 ${order.orderType || 'Ride'}
+                            </div>
+
+                            <div class="created-at">
+                                🕒 ${uiUtils.formatDate(order.createdAt)}
+                            </div>
+
+                            ${
+                                order.fare?.totalFare !== undefined
+                                ? `<div class="price">💰 ₹${Number(order.fare.totalFare).toFixed(2)}</div>`
+                                : ''
+                            }
+
+                            ${
+                                order.estimatedDistance !== undefined
+                                ? `<div class="distance">📏 ${Number(order.estimatedDistance).toFixed(2)} km</div>`
+                                : ''
+                            }
+
+                            ${
+                                order.estimatedDuration !== undefined
+                                ? `<div class="duration">⏱ ${order.estimatedDuration} min</div>`
+                                : ''
+                            }
+                        </div>
+
+                        ${
+                            order.driver
+                            ? `
+                                <div class="driver-info">
+                                    <div class="driver-name">
+                                        👨‍💼 Driver assigned
+                                    </div>
+                                </div>
+                            `
+                            : ''
+                        }
+
+                        ${
+                            order.specialInstructions
+                            ? `
+                                <div class="notes">
+                                    📝 ${order.specialInstructions}
+                                </div>
+                            `
+                            : ''
+                        }
+
                     </div>
+
                     <div class="order-actions">
-                        ${order.status === 'pending' ? `
-                            <button class="btn btn-danger btn-sm" onclick="cancelOrder('${order._id}')">
-                                Cancel Order
-                            </button>
-                        ` : ''}
-                        <button class="btn btn-secondary btn-sm" onclick="showOrderDetails('${order._id}')">
+
+                        ${
+                            order.status === 'pending'
+                            ? `
+                                <button
+                                    class="btn btn-danger btn-sm"
+                                    onclick="cancelOrder('${order.orderId}')">
+                                    Cancel Order
+                                </button>
+                            `
+                            : ''
+                        }
+
+                        <button
+                            class="btn btn-secondary btn-sm"
+                            onclick="showOrderDetails('${order.orderId}')">
                             View Details
                         </button>
+
                     </div>
                 </div>
             `).join('');
@@ -425,23 +530,41 @@
                 return;
             }
 
-            const result = await authManager.apiCall(`/orders/${orderId}`, {
-                method: 'DELETE'
+            const result = await authManager.apiCall(`/orders/${orderId}/cancel`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    reason: 'Cancelled by customer'
+                })
             });
-            
+
             if (result.success) {
                 uiUtils.showMessage('Order cancelled successfully', 'success');
-                loadOrders(); // Refresh orders
+                loadOrders();
             } else {
-                uiUtils.showMessage('Failed to cancel order', 'error');
+                uiUtils.showMessage(
+                    result.error || result.message || 'Failed to cancel order',
+                    'error'
+                );
             }
         }
 
         // Show order details
         function showOrderDetails(orderId) {
-            const order = orders.find(o => o._id === orderId);
+            const order = orders.find(o => o.orderId === orderId);
+
             if (order) {
-                alert(`Order Details:\n\nID: ${order.orderId}\nStatus: ${order.status}\nFrom: ${order.pickupLocation}\nTo: ${order.destination}\nVehicle: ${order.vehicleType}\nCreated: ${new Date(order.createdAt).toLocaleString()}`);
+                alert(
+                    `Order Details:\n\n` +
+                    `ID: ${order.orderId}\n` +
+                    `Status: ${order.status.toUpperCase()}\n` +
+                    `From: ${order.pickupAddress || 'N/A'}\n` +
+                    `To: ${order.dropoffAddress || 'N/A'}\n` +
+                    `Type: ${order.orderType || 'N/A'}\n` +
+                    `Distance: ${order.estimatedDistance ?? 'N/A'} km\n` +
+                    `Duration: ${order.estimatedDuration ?? 'N/A'} min\n` +
+                    `Fare: ₹${order.fare?.totalFare?.toFixed(2) ?? 'N/A'}\n` +
+                    `Created: ${new Date(order.createdAt).toLocaleString()}`
+                );
             }
         }
 

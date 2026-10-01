@@ -161,17 +161,105 @@
     </div>
 
     <script src="js/auth.js"></script>
+    <script src="http://localhost:3000/socket.io/socket.io.js"></script>
     <script>
         let orders = [];
         let autoRefreshInterval = null;
         let isAvailable = false;
 
+        let socket = null;
+
+        function connectSocket() {
+            const token = authManager.token;
+
+            if (!token) {
+                console.warn('⚠️ No authentication token found');
+                return;
+            }
+
+            socket = io('http://localhost:3000', {
+                auth: {
+                    token: token
+                }
+            });
+
+            socket.on('connect', () => {
+                console.log('🟢 Driver Socket connected:', socket.id);
+            });
+
+            socket.on('new_order_offer', (data) => {
+                console.log('🚨 NEW ORDER OFFER RECEIVED:', data);
+
+                const details = data.orderDetails;
+
+                const fare =
+                    typeof details.fare === 'object'
+                        ? details.fare.totalFare
+                        : details.fare;
+
+                document.getElementById('action-modal-title').textContent =
+                    '🚕 New Ride Request';
+
+                document.getElementById('order-action-content').innerHTML = `
+                    <div class="ride-offer">
+
+                        <div class="ride-offer-detail">
+                            <strong>📍 Pickup</strong>
+                            <span>${details.pickupAddress}</span>
+                        </div>
+
+                        <div class="ride-offer-detail">
+                            <strong>🏁 Dropoff</strong>
+                            <span>${details.dropoffAddress}</span>
+                        </div>
+
+                        <div class="ride-offer-detail">
+                            <strong>📏 Distance</strong>
+                            <span>${details.estimatedDistance} km</span>
+                        </div>
+
+                        <div class="ride-offer-detail">
+                            <strong>💰 Fare</strong>
+                            <span>₹${fare}</span>
+                        </div>
+
+                        <div class="ride-offer-actions">
+
+                            <button
+                                class="btn btn-danger"
+                                onclick="rejectOrder('${data.orderId}'); closeOrderActionModal();">
+                                ❌ Reject
+                            </button>
+
+                            <button
+                                class="btn btn-primary"
+                                onclick="acceptOrder('${data.orderId}'); closeOrderActionModal();">
+                                ✅ Accept
+                            </button>
+
+                        </div>
+
+                    </div>
+                `;
+
+                document.getElementById('order-action-modal').style.display = 'block';
+            });
+
+            socket.on('connect_error', (error) => {
+                console.error('❌ Driver Socket connection error:', error.message);
+            });
+
+            socket.on('disconnect', (reason) => {
+                console.log('🔴 Driver Socket disconnected:', reason);
+            });
+        }
         // Initialize the application
         function initApp() {
             console.log('🚀 Initializing Driver Dashboard');
             
             if (authManager.isAuthenticated()) {
                 showDashboard();
+                connectSocket();
                 loadUserInfo();
                 loadOrders();
                 loadDriverStats();
@@ -243,6 +331,7 @@
                     
                     uiUtils.showMessage('Login successful!', 'success');
                     showDashboard();
+                    connectSocket();
                     loadUserInfo();
                     loadOrders();
                     loadDriverStats();
@@ -454,7 +543,7 @@
 
         // Accept order
         async function acceptOrder(orderId) {
-            const result = await authManager.apiCall(`/drivers/orders/${orderId}/accept`, {
+            const result = await authManager.apiCall(`/orders/${orderId}/accept`, {
                 method: 'PUT'
             });
 
@@ -472,7 +561,7 @@
                 return;
             }
 
-            const result = await authManager.apiCall(`/drivers/orders/${orderId}/reject`, {
+            const result = await authManager.apiCall(`/orders/${orderId}/decline`, {
                 method: 'PUT'
             });
 

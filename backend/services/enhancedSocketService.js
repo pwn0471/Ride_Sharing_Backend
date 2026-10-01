@@ -35,24 +35,32 @@ class EnhancedSocketService {
 
     async authenticateSocket(socket, next) {
         try {
-            const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.split(' ')[1];
-            
+            const token =
+                socket.handshake.auth.token ||
+                socket.handshake.headers.authorization?.split(' ')[1];
+
             if (!token) {
-                // Allow anonymous connections for testing/browsing
                 socket.userId = 'anonymous';
                 socket.userType = 'guest';
                 return next();
             }
 
-            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-            socket.userId = decoded.id;
-            socket.userType = decoded.type;
-            
+            const decoded = jwt.verify(
+                token,
+                process.env.JWT_SECRET || 'your-secret-key'
+            );
+
+            // JWT created by /auth/login uses userId and userType
+            socket.userId = decoded.userId;
+            socket.userType = decoded.userType;
+
             next();
         } catch (error) {
-            // Allow connection but mark as anonymous if token is invalid
+            console.error('Socket authentication error:', error.message);
+
             socket.userId = 'anonymous';
             socket.userType = 'guest';
+
             next();
         }
     }
@@ -71,10 +79,24 @@ class EnhancedSocketService {
         // Categorize by user type
         if (userType === 'driver') {
             this.driverSockets.set(userId, socket.id);
-            socket.join('drivers'); // Join drivers room
-        } else {
+
+            // General drivers room
+            socket.join('drivers');
+
+            // Individual driver room
+            // Used for ride offers
+            socket.join(`driver:${userId}`);
+
+            console.log(`🚗 Driver ${userId} joined driver:${userId} room`);
+        } else if (userType === 'customer') {
             this.customerSockets.set(userId, socket.id);
-            socket.join('customers'); // Join customers room
+
+            socket.join('customers');
+
+            // Individual customer room
+            socket.join(`customer:${userId}`);
+
+            console.log(`👤 Customer ${userId} joined customer:${userId} room`);
         }
 
         // Send connection acknowledgment with optimized polling settings

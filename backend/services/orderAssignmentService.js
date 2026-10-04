@@ -15,22 +15,32 @@ class OrderAssignmentService {
    * @param {number} radiusKm - Search radius in kilometers
    * @returns {Array} - Array of nearby drivers
    */
-  async findNearbyDrivers(pickupLocation, radiusKm = 5) {
+  async findNearbyDrivers(pickupLocation, radiusKm = 5, orderId = null) {
     try {
       const drivers = await User.find({
-        userType: 'driver',
-        isActive: true,
-        'driverDetails.isAvailable': true,
-        'driverDetails.currentLocation': {
-          $near: {
-            $geometry: {
-              type: 'Point',
-              coordinates: [pickupLocation.longitude, pickupLocation.latitude]
-            },
-            $maxDistance: radiusKm * 1000 // Convert km to meters
-          }
+      userType: 'driver',
+      isActive: true,
+      'driverDetails.isAvailable': true,
+
+      ...(orderId && {
+        _id: {
+          $nin: await Order.distinct('assignmentAttempts.driverId', {
+            orderId: orderId,
+            'assignmentAttempts.response': 'declined'
+          })
         }
-      }).select('name phone driverDetails');
+      }),
+
+      'driverDetails.currentLocation': {
+        $near: {
+          $geometry: {
+            type: 'Point',
+            coordinates: [pickupLocation.longitude, pickupLocation.latitude]
+          },
+          $maxDistance: radiusKm * 1000
+        }
+      }
+    }).select('name phone driverDetails');
 
       // Calculate actual distance and add to driver object
       return drivers.map(driver => {
@@ -88,7 +98,7 @@ class OrderAssignmentService {
         };
 
         // Find nearby drivers
-        const nearbyDrivers = await this.findNearbyDrivers(pickupLocation);
+        const nearbyDrivers = await this.findNearbyDrivers(pickupLocation, 5, orderId);
         
         if (nearbyDrivers.length === 0) {
           await this.redisClient.del(lockKey);

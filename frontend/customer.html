@@ -120,8 +120,16 @@
                             id="pickup-coordinates"
                             required
                             placeholder="latitude, longitude"
-                            value="22.0667, 88.0698"
+                            
                         >
+                        <button
+                            type="button"
+                            class="btn btn-secondary"
+                            onclick="getCurrentLocation()"
+                            style="margin-top: 8px;"
+                        >
+                            📍 Use My Current Location
+                        </button>
                     </div>
 
                     <div class="form-group">
@@ -131,8 +139,16 @@
                             id="dropoff-coordinates"
                             required
                             placeholder="latitude, longitude"
-                            value="22.0740, 88.0690"
+                            
                         >
+                        <button
+                            type="button"
+                            class="btn btn-secondary"
+                            onclick="getDestinationCoordinates()"
+                            style="margin-top: 8px;"
+                        >
+                            📍 Find Destination Coordinates
+                        </button>
                     </div>
                     <div class="form-group">
                         <label for="vehicle-type">Vehicle Type:</label>
@@ -602,6 +618,107 @@
             authManager.logout();
         }
 
+        async function getDestinationCoordinates() {
+            const destinationInput = document.getElementById('destination');
+            const coordinatesInput = document.getElementById('dropoff-coordinates');
+
+            const destination = destinationInput.value.trim();
+
+            if (!destination) {
+                alert('❌ Please enter a destination address first.');
+                destinationInput.focus();
+                return;
+            }
+
+            try {
+                coordinatesInput.value = 'Finding location...';
+
+                const response = await fetch(
+                    `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(destination)}`
+                );
+
+                if (!response.ok) {
+                    throw new Error('Geocoding request failed');
+                }
+
+                const results = await response.json();
+
+                if (results.length === 0) {
+                    coordinatesInput.value = '';
+                    alert('❌ Destination location could not be found. Please enter a more specific address.');
+                    return;
+                }
+
+                const location = results[0];
+
+                const latitude = parseFloat(location.lat);
+                const longitude = parseFloat(location.lon);
+
+                coordinatesInput.value = `${latitude}, ${longitude}`;
+
+                console.log('📍 Destination Coordinates:', {
+                    address: location.display_name,
+                    latitude,
+                    longitude
+                });
+
+            } catch (error) {
+                console.error('❌ Destination geocoding error:', error);
+
+                coordinatesInput.value = '';
+
+                alert('❌ Unable to find the destination location.');
+            }
+        }
+
+        function getCurrentLocation() {
+            if (!navigator.geolocation) {
+                alert('❌ Geolocation is not supported by your browser.');
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const latitude = position.coords.latitude;
+                    const longitude = position.coords.longitude;
+
+                    document.getElementById('pickup-coordinates').value =
+                        `${latitude}, ${longitude}`;
+
+                    console.log('📍 Current Location:', {
+                        latitude,
+                        longitude
+                    });
+                },
+                (error) => {
+                    console.error('❌ Location error:', error);
+
+                    switch (error.code) {
+                        case error.PERMISSION_DENIED:
+                            alert('❌ Location permission was denied. Please allow location access.');
+                            break;
+
+                        case error.POSITION_UNAVAILABLE:
+                            alert('❌ Location information is unavailable.');
+                            break;
+
+                        case error.TIMEOUT:
+                            alert('❌ Location request timed out.');
+                            break;
+
+                        default:
+                            alert('❌ Unable to get your current location.');
+                    }
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        }
+       
+        
         // Handle page visibility change to prevent unnecessary API calls when page is hidden
         document.addEventListener('visibilitychange', function() {
             if (document.hidden) {

@@ -287,7 +287,7 @@
             if (user) {
                 document.getElementById('user-name').textContent = user.name;
                 // Set initial availability based on user status
-                isAvailable = user.isAvailable || false;
+                isAvailable = user.driverDetails?.isAvailable || false;
                 document.getElementById('availability-toggle').checked = isAvailable;
                 updateAvailabilityUI();
             }
@@ -384,7 +384,7 @@
             console.log('📊 Loading driver statistics');
             // This would typically come from an API endpoint
             // For now, we'll calculate from orders
-            const completedOrders = orders.filter(order => order.status === 'completed');
+            const completedOrders = orders.filter(order => order.status === 'delivered');
             const totalEarnings = completedOrders.reduce((sum, order) => sum + (order.fare || 0), 0);
 
             document.getElementById('total-orders').textContent = orders.length;
@@ -484,7 +484,7 @@
                             View Details
                         </button>
                     `;
-                case 'in-progress':
+                case 'pickup_started':
                     return `
                         <button class="btn btn-primary btn-sm" onclick="completeRide('${order._id}')">
                             🏁 Complete Ride
@@ -618,28 +618,38 @@
         // Show order details
         function showOrderDetails(orderId) {
             const order = orders.find(o => o._id === orderId);
+
             if (order) {
                 let details = `Order Details:\n\n`;
+
                 details += `ID: ${order.orderId}\n`;
                 details += `Status: ${order.status}\n`;
-                details += `From: ${order.pickupLocation}\n`;
-                details += `To: ${order.destination}\n`;
-                details += `Vehicle: ${order.vehicleType}\n`;
+                details += `From: ${order.pickupLocation || 'N/A'}\n`;
+                details += `To: ${order.destination || 'N/A'}\n`;
+                details += `Vehicle: ${order.vehicleType || 'N/A'}\n`;
                 details += `Created: ${new Date(order.createdAt).toLocaleString()}\n`;
-                
+
                 if (order.customer) {
-                    details += `Customer: ${order.customer.name}\n`;
-                    details += `Phone: ${order.customer.phone}\n`;
+                    details += `Customer: ${order.customer.name || 'N/A'}\n`;
+                    details += `Phone: ${order.customer.phone || 'N/A'}\n`;
                 }
-                
+
                 if (order.estimatedPrice) {
                     details += `Price: ₹${order.estimatedPrice}\n`;
                 }
-                
+
+                if (order.fare) {
+                    details += `Fare: ₹${order.fare}\n`;
+                }
+
+                if (order.distance) {
+                    details += `Distance: ${order.distance} km\n`;
+                }
+
                 if (order.notes) {
                     details += `Notes: ${order.notes}\n`;
                 }
-                
+
                 alert(details);
             }
         }

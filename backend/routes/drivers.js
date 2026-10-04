@@ -545,6 +545,7 @@ router.get('/orders', authenticateToken, requireDriver, async (req, res) => {
 
     const orders = await Order.find(query)
       .populate('customer', 'name phone')
+      .populate('driver', 'driverDetails.vehicleType')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -565,7 +566,7 @@ router.get('/orders', authenticateToken, requireDriver, async (req, res) => {
         status: order.status,
         pickupLocation: order.pickupLocation?.address || order.pickupLocation,
         destination: order.dropoffLocation?.address || order.dropoffLocation,
-        vehicleType: order.vehicleType,
+        vehicleType: order.driver?.driverDetails?.vehicleType || 'Not specified',
         estimatedPrice: order.estimatedPrice,
         fare: order.fare?.totalFare,
         distance: order.distance,
@@ -997,7 +998,7 @@ router.put('/orders/:orderId/start', authenticateToken, requireDriver, async (re
       });
     }
 
-    order.status = 'in-progress';
+    order.status = 'pickup_started';
     order.timestamps.started = new Date();
     await order.save();
 
@@ -1010,7 +1011,7 @@ router.put('/orders/:orderId/start', authenticateToken, requireDriver, async (re
     // Emit order update to customer
     req.io.emit('order_update', {
       orderId: order.orderId,
-      status: 'in-progress',
+      status: 'pickup_started',
       message: 'Ride has started',
       timestamp: new Date()
     });
@@ -1047,7 +1048,7 @@ router.put('/orders/:orderId/complete', authenticateToken, requireDriver, async 
     const order = await Order.findOne({ 
       _id: orderId,
       driver: driverId,
-      status: 'in-progress'
+      status: 'pickup_started'
     }).populate('customer', 'name phone');
 
     if (!order) {
@@ -1056,7 +1057,7 @@ router.put('/orders/:orderId/complete', authenticateToken, requireDriver, async 
       });
     }
 
-    order.status = 'completed';
+    order.status = 'delivered';
     order.timestamps.completed = new Date();
     
     // Set fare if provided
@@ -1072,6 +1073,7 @@ router.put('/orders/:orderId/complete', authenticateToken, requireDriver, async 
 
     // Update driver stats
     await User.findByIdAndUpdate(driverId, {
+      'driverDetails.isAvailable': true,
       $inc: { 'driverDetails.totalDeliveries': 1 }
     });
 
@@ -1085,7 +1087,7 @@ router.put('/orders/:orderId/complete', authenticateToken, requireDriver, async 
     // Emit order update to customer
     req.io.emit('order_update', {
       orderId: order.orderId,
-      status: 'completed',
+      status: 'delivered',
       message: 'Ride completed successfully',
       fare: order.fare,
       timestamp: new Date()

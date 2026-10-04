@@ -12,7 +12,7 @@ class AuthManager {
     storeToken(token) {
         try {
             // Store in localStorage for persistence across sessions
-            localStorage.setItem(this.tokenKey, token);
+            sessionStorage.setItem(this.tokenKey, token);
             this.token = token;
             console.log('✅ Token stored successfully');
             return true;
@@ -25,7 +25,7 @@ class AuthManager {
     // Store user data
     storeUser(user) {
         try {
-            localStorage.setItem(this.userKey, JSON.stringify(user));
+            sessionStorage.setItem(this.userKey, JSON.stringify(user));
             this.user = user;
             console.log('✅ User data stored successfully');
             return true;
@@ -38,7 +38,7 @@ class AuthManager {
     // Get stored token
     getStoredToken() {
         try {
-            const token = localStorage.getItem(this.tokenKey);
+            const token = sessionStorage.getItem(this.tokenKey);
             if (token && this.isTokenValid(token)) {
                 return token;
             }
@@ -56,7 +56,7 @@ class AuthManager {
     // Get stored user data
     getStoredUser() {
         try {
-            const userData = localStorage.getItem(this.userKey);
+            const userData = sessionStorage.getItem(this.userKey);
             return userData ? JSON.parse(userData) : null;
         } catch (error) {
             console.error('❌ Failed to retrieve user data:', error);
@@ -98,8 +98,8 @@ class AuthManager {
 
     // Clear authentication data
     clearAuth() {
-        localStorage.removeItem(this.tokenKey);
-        localStorage.removeItem(this.userKey);
+        sessionStorage.removeItem(this.tokenKey);
+        sessionStorage.removeItem(this.userKey);
         this.token = null;
         this.user = null;
         console.log('🔄 Authentication cleared');

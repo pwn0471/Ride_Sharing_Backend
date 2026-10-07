@@ -322,6 +322,11 @@ router.post('/login', async (req, res) => {
 
     // Find user by email
     const user = await User.findOne({ email }).select('+password');
+    console.log('🔍 LOGIN USER:', {
+      id: user?._id,
+      email: user?.email,
+      userType: user?.userType
+    });
     if (!user) {
       Logger.auth('Login failed - user not found', {
         email,
@@ -394,7 +399,7 @@ router.post('/login', async (req, res) => {
 
   } catch (error) {
     Logger.error('Login failed with database error', error, {
-      email,
+      email: req.body.email,
       ip,
       userAgent: req.get('user-agent'),
       loginDuration: `${Date.now() - loginStartTime}ms`

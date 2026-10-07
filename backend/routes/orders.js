@@ -146,6 +146,8 @@ router.post('/', authenticateToken, requireCustomer, async (req, res) => {
     const pickupLocation = { latitude: pickupLatitude, longitude: pickupLongitude };
     const dropoffLocation = { latitude: dropoffLatitude, longitude: dropoffLongitude };
     
+    console.log("📍 Pickup Location:", pickupLocation);
+    console.log("📍 Dropoff Location:", dropoffLocation)
     const distance = calculateDistance(pickupLocation, dropoffLocation);
     const estimatedDuration = calculateEstimatedDuration(distance);
 

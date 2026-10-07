@@ -348,7 +348,7 @@ class OrderAssignmentService {
     try {
       const order = await Order.findOne({ orderId }).populate('customer');
       if (order) {
-        order.updateStatus('failed', null, reason);
+        order.updateStatus('cancelled', null, reason);
         order.releaseLock();
         await order.save();
 
